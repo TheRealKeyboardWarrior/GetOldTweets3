@@ -140,14 +140,6 @@ def streamTweets(tweets):
 got.manager.TweetManager.getTweets(tweetCriteria, receiveBuffer=streamTweets, bufferLength=100)
 ```
 
-**Prevent getting rate limited by waiting between requests:**
-``` python
-tweetCriteria = got.manager.TweetCriteria().setQuerySearch('429 too many requests')\
-                                            .setMaxTweets(1000)
-tweet = got.manager.TweetManager.getTweets(tweetCriteria)[999]
-print(tweet.text)
-```
-
 **Use a proxy to execute the request:**
 ``` python
 tweetCriteria = got.manager.TweetCriteria().setUsername("barackobama")\
@@ -184,4 +176,3 @@ def sleepBetweenFailedRequests(requestId, proxy):
 tweet = got.manager.TweetManager.getTweets(tweetCriteria, rateLimitStrategy=sleepBetweenFailedRequests)[0]
 print(tweet.text)
 ```
-secondsBetweenRequests=None, 
