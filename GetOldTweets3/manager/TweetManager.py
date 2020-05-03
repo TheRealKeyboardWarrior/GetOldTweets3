@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import json, re, datetime, sys, random, http.cookiejar
+import json, re, datetime, sys, random, http.cookiejar, time, collections, string
 import urllib.request, urllib.parse, urllib.error
 from pyquery import PyQuery
 from .. import models
@@ -22,7 +22,7 @@ class TweetManager:
     ]
 
     @staticmethod
-    def getTweets(tweetCriteria, receiveBuffer=None, bufferLength=100, proxy=None, debug=False):
+    def getTweets(tweetCriteria, receiveBuffer=None, bufferLength=100, proxy=None, debug=False, rateLimitStrategy=None):
         """Get tweets that match the tweetCriteria parameter
         A static method.
 
@@ -62,7 +62,7 @@ class TweetManager:
 
             active = True
             while active:
-                json = TweetManager.getJsonResponse(tweetCriteria, refreshCursor, cookieJar, proxy, user_agent, debug=debug)
+                json = TweetManager.getJsonResponse(tweetCriteria, refreshCursor, cookieJar, proxy, user_agent, rateLimitStrategy, debug=debug)
                 if len(json['items_html'].strip()) == 0:
                     break
 
@@ -271,7 +271,7 @@ class TweetManager:
         return attr
 
     @staticmethod
-    def getJsonResponse(tweetCriteria, refreshCursor, cookieJar, proxy, useragent=None, debug=False):
+    def getJsonResponse(tweetCriteria, refreshCursor, cookieJar, proxy, useragent=None, rateLimitStrategy=None, debug=False):
         """Invoke an HTTP query to Twitter.
         Should not be used as an API function. A static method.
         """
@@ -329,23 +329,36 @@ class TweetManager:
             ('Connection', "keep-alive")
         ]
 
-        if proxy:
-            opener = urllib.request.build_opener(urllib.request.ProxyHandler({'http': proxy, 'https': proxy}), urllib.request.HTTPCookieProcessor(cookieJar))
-        else:
-            opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookieJar))
-        opener.addheaders = headers
+        # Generate a unique request ID (passed to the rateLimitStrategy)
+        uniqueRequestId = ''.join(random.choices(string.ascii_uppercase + string.digits, k=32))
+        retry = True
+        while retry:
+            proxyString = ""
+            if proxy:
+                proxyString = proxy
+                if isinstance(proxy, collections.Callable):
+                    proxyString = proxy()
 
-        if debug:
-            print(url)
-            print('\n'.join(h[0]+': '+h[1] for h in headers))
+                opener = urllib.request.build_opener(urllib.request.ProxyHandler({'http': proxyString, 'https': proxyString}), urllib.request.HTTPCookieProcessor(cookieJar))
+            else:
+                opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookieJar))
+            opener.addheaders = headers
 
-        try:
-            response = opener.open(url)
-            jsonResponse = response.read()
-        except Exception as e:
-            print("An error occured during an HTTP request:", str(e))
-            print("Try to open in browser: https://twitter.com/search?q=%s&src=typd" % urllib.parse.quote(urlGetData))
-            sys.exit()
+            if debug:
+                print(url)
+                print('\n'.join(h[0]+': '+h[1] for h in headers))
+
+            try:
+                response = opener.open(url)
+                jsonResponse = response.read()
+            except Exception as e:
+                print("An error occured during an HTTP request:", str(e))
+                print("Try to open in browser: https://twitter.com/search?q=%s&src=typd" % urllib.parse.quote(urlGetData))
+                retry = False
+                if isinstance(rateLimitStrategy, collections.Callable) and e['code'] is 429:
+                    retry = rateLimitStrategy(request=uniqueRequestId, proxy=proxyString)
+                if retry is False:
+                    sys.exit()
 
         try:
             s_json = jsonResponse.decode()

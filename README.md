@@ -128,3 +128,60 @@ tweetCriteria = got.manager.TweetCriteria().setUsername("barackobama")\
 tweet = got.manager.TweetManager.getTweets(tweetCriteria)[0]
 print(tweet.text)
 ```
+
+**Stream Tweets in batches of 100:**
+``` python
+tweetCriteria = got.manager.TweetCriteria().setQuerySearch('stream processing')\
+                                            .setMaxTweets(1000)
+def streamTweets(tweets):
+    # tweets is an array of size <= bufferLength
+    print(tweets[0].text)
+
+got.manager.TweetManager.getTweets(tweetCriteria, receiveBuffer=streamTweets, bufferLength=100)
+```
+
+**Prevent getting rate limited by waiting between requests:**
+``` python
+tweetCriteria = got.manager.TweetCriteria().setQuerySearch('429 too many requests')\
+                                            .setMaxTweets(1000)
+tweet = got.manager.TweetManager.getTweets(tweetCriteria)[999]
+print(tweet.text)
+```
+
+**Use a proxy to execute the request:**
+``` python
+tweetCriteria = got.manager.TweetCriteria().setUsername("barackobama")\
+                                           .setTopTweets(True)\
+                                           .setMaxTweets(10)
+tweet = got.manager.TweetManager.getTweets(tweetCriteria, proxy="ip:port")[0]
+print(tweet.text)
+```
+
+**Dynamically get proxy to execute the request:**
+``` python
+tweetCriteria = got.manager.TweetCriteria().setUsername("barackobama")\
+                                           .setTopTweets(True)\
+                                           .setMaxTweets(10)
+def getRandomProxy():
+    return random.choice(["ip:port", "ip2:port"])
+tweet = got.manager.TweetManager.getTweets(tweetCriteria, proxy=getRandomProxy)[0]
+print(tweet.text)
+```
+
+**Custom ratelimit prevention strategy:**
+``` python
+tweetCriteria = got.manager.TweetCriteria().setUsername("barackobama")\
+                                           .setTopTweets(True)\
+                                           .setMaxTweets(10)
+def sleepBetweenFailedRequests(requestId, proxy):
+    # A unique request ID and the proxy it used are passed
+    # for more advanced rate limiting preventing strategies.
+
+    # Sleep for 60 seconds
+    time.sleep(60)
+    # Return True will cause it to try again
+    return True
+tweet = got.manager.TweetManager.getTweets(tweetCriteria, rateLimitStrategy=sleepBetweenFailedRequests)[0]
+print(tweet.text)
+```
+secondsBetweenRequests=None, 
