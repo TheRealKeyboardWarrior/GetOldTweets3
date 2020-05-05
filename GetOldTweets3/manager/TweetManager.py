@@ -348,14 +348,13 @@ class TweetManager:
                 print(url)
                 print('\n'.join(h[0]+': '+h[1] for h in headers))
 
+            retry = False
             try:
                 response = opener.open(url)
                 jsonResponse = response.read()
-                retry = False
             except Exception as e:
                 print("An error occured during an HTTP request:", str(e))
                 print("Try to open in browser: https://twitter.com/search?q=%s&src=typd" % urllib.parse.quote(urlGetData))
-                retry = False
                 if isinstance(rateLimitStrategy, collections.Callable) and e['code'] is 429:
                     retry = rateLimitStrategy(request=uniqueRequestId, proxy=proxyString)
                 if retry is False:
