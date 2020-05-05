@@ -355,7 +355,7 @@ class TweetManager:
             except Exception as e:
                 print("An error occured during an HTTP request:", str(e))
                 print("Try to open in browser: https://twitter.com/search?q=%s&src=typd" % urllib.parse.quote(urlGetData))
-                if isinstance(rateLimitStrategy, collections.Callable) and e['code'] is 429:
+                if isinstance(rateLimitStrategy, collections.Callable) and e.response.status_code is 429:
                     retry = rateLimitStrategy(request=uniqueRequestId, proxy=proxyString)
                 if retry is False:
                     sys.exit()
