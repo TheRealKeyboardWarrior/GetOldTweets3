@@ -162,17 +162,32 @@ print(tweet.text)
 
 **Custom ratelimit prevention strategy:**
 ``` python
+import collections, urllib.error
 tweetCriteria = got.manager.TweetCriteria().setUsername("barackobama")\
                                            .setTopTweets(True)\
                                            .setMaxTweets(10)
-def sleepBetweenFailedRequests(requestId, proxy):
+def sleepBetweenFailedRequests(requestId, error, proxy):
     # A unique request ID and the proxy it used are passed
     # for more advanced rate limiting preventing strategies.
 
-    # Sleep for 60 seconds
-    time.sleep(60)
-    # Return True will cause it to try again
-    return True
+    # Deal with all the potential URLLib errors that may happen
+    # https://docs.python.org/3/library/urllib.error.html
+    if (isinstance(error, HTTPError) and e.response.status_code in [429, 503]):
+      # Sleep for 60 seconds
+      time.sleep(60)
+      return True
+
+    if (isinstance(error, URLError) and e.errno in [111]):
+      # Sleep for 60 seconds
+      time.sleep(60)
+      return True
+
+    # To stop execution of the scraper
+    # raise Exception("Rate Limiting Strategy received an error it doesn't know how to deal with")
+
+    # To stop just this single request, return False
+    return False
+
 tweet = got.manager.TweetManager.getTweets(tweetCriteria, rateLimitStrategy=sleepBetweenFailedRequests)[0]
 print(tweet.text)
 ```
