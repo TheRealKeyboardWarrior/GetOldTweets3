@@ -166,18 +166,18 @@ import collections, urllib.error
 tweetCriteria = got.manager.TweetCriteria().setUsername("barackobama")\
                                            .setTopTweets(True)\
                                            .setMaxTweets(10)
-def sleepBetweenFailedRequests(requestId, error, proxy):
+def sleepBetweenFailedRequests(request, error, proxy):
     # A unique request ID and the proxy it used are passed
     # for more advanced rate limiting preventing strategies.
 
     # Deal with all the potential URLLib errors that may happen
     # https://docs.python.org/3/library/urllib.error.html
-    if (isinstance(error, HTTPError) and e.response.status_code in [429, 503]):
+    if (isinstance(error, HTTPError) and error.status_code in [429, 503]):
       # Sleep for 60 seconds
       time.sleep(60)
       return True
 
-    if (isinstance(error, URLError) and e.errno in [111]):
+    if (isinstance(error, URLError) and error.errno in [111]):
       # Sleep for 60 seconds
       time.sleep(60)
       return True
